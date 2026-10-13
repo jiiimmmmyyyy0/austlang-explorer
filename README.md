@@ -6,8 +6,8 @@ name or by place, using the AUSTLANG dataset published by AIATSIS.
 Built for CITS1501 Introduction to Programming with Python (UWA), project brief
 **Language and Country Explorer**.
 
-- **Live app:** _add your Streamlit Community Cloud link here_
-- **Author:** _your name and student number_
+- **Live app:** https://austlang-explorer2.streamlit.app
+- **Author:** Charles Potter (25309156) and Remy Payne
 
 ## Who it is for
 
