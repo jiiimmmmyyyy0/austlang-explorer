@@ -6,74 +6,6 @@ name or by place, using the AUSTLANG dataset published by AIATSIS.
 Built for CITS1501 Introduction to Programming with Python (UWA), project brief
 **Language and Country Explorer**.
 
-  data_loader.py        reads and cleans the CSV; CSV export
-  text_search.py        normalisation, Levenshtein edit distance, ranked search
-  geo.py                haversine distance, bearings, coordinate parsing, nearest search, state estimate
-  analysis.py           density grid, concentration, state profiles, name statistics
-scripts/download_data.py  checks the downloaded dataset and saves it
-data/                   austlang.csv and its README (source, licence, columns)
-tests/                  pytest suite and synthetic fixture
-docs/                   architecture and manual testing checklist
-.streamlit/config.toml  theme; usage statistics turned off
-```
-
-## Architecture
-
-```mermaid
-flowchart TD
-    user([User in a web browser])
-    subgraph UI["Presentation layer: Streamlit"]
-        app["app.py<br/>page setup and menu"]
-        views["views/<br/>home, search, nearby, insights, about_data"]
-        common["ui_common.py<br/>cached loading, maps, safe text"]
-    end
-    subgraph CORE["Core logic: explorer/ (plain Python)"]
-        loader["data_loader.py<br/>read and clean CSV"]
-        search["text_search.py<br/>normalise, edit distance, rank"]
-        geo["geo.py<br/>haversine, nearest, state estimate"]
-        analysis["analysis.py<br/>grid, counts, statistics"]
-    end
-    csv[("data/austlang.csv<br/>AUSTLANG, AIATSIS, CC BY 4.0")]
-    script["scripts/download_data.py"]
-    tests["tests/ (pytest)"]
-
-    user -- "clicks and typed text" --> app
-    app --> views
-    views -- "get_data()" --> common
-    common -- "load_languages()" --> loader
-    loader -- "reads" --> csv
-    script -- "checks and saves" --> csv
-    loader -- "estimate_state()" --> geo
-    common -- "build_search_index()" --> search
-    views -- "search_languages()" --> search
-    views -- "parse_coordinates(), nearest_languages()" --> geo
-    views -- "density_grid(), state_profiles(), ..." --> analysis
-    views -- "tables, charts and maps" --> user
-    tests -. "check" .-> CORE
-```
-
-Data flow: on first use, `ui_common.get_data()` calls `load_languages()`, which reads
-the CSV, cleans each row into a `Language` object and returns a `CleaningReport`. The
-result and a search index are cached, so later screens reuse them. Each screen reads
-user input, validates it, calls the core functions and displays the results. See
-`docs/architecture.md` for more detail.
-
-## Main algorithms
-
-1. **Spelling-tolerant search** (`explorer/text_search.py`). Names are normalised (accents,
-   case, spaces and punctuation removed). Each spelling is classed as an exact, starts-with,
-   contains or similar-spelling match; similarity uses a hand-written Levenshtein edit
-   distance (dynamic programming, two rows of memory) with a length shortcut that skips
-   hopeless comparisons. Each language keeps its best match; results are ranked by match
-   type, score and name.
-2. **Nearest varieties** (`explorer/geo.py`). The haversine formula gives the great-circle
-   distance from the user's point to every mapped variety; results within the chosen
-   distance are sorted (ties alphabetical) and the closest k returned with a compass direction.
-3. **State estimate** (`explorer/geo.py`). A rule-based classifier using the straight state
-   borders (129°E, 138°E, 141°E, 26°S, 29°S) plus interpolated lines for the QLD–NSW and
-   NSW–VIC borders. Used only when AUSTLANG's own state column is missing or blank.
-4. **Analysis** (`explorer/analysis.py`). Floor-division binning into a lat/long grid, the
-   number of busiest squares holding half of all varieties, per-state co
 - **Live app:** https://austlang-explorer2.streamlit.app
 - **Author:** Charles Potter (25309156) and Remy Payne (25133834)
 
@@ -154,7 +86,75 @@ app.py                  page setup and navigation menu
 ui_common.py            shared Streamlit code: cached data loading, maps, safe text
 views/                  one file per screen
 explorer/               core logic, plain Python (no Streamlit), fully tested
-  models.py             Language and CleaningReport data classes, constantsunts and averages,
+  models.py             Language and CleaningReport data classes, constants
+  data_loader.py        reads and cleans the CSV; CSV export
+  text_search.py        normalisation, Levenshtein edit distance, ranked search
+  geo.py                haversine distance, bearings, coordinate parsing, nearest search, state estimate
+  analysis.py           density grid, concentration, state profiles, name statistics
+scripts/download_data.py  checks the downloaded dataset and saves it
+data/                   austlang.csv and its README (source, licence, columns)
+tests/                  pytest suite and synthetic fixture
+docs/                   architecture and manual testing checklist
+.streamlit/config.toml  theme; usage statistics turned off
+```
+
+## Architecture
+
+```mermaid
+flowchart TD
+    user([User in a web browser])
+    subgraph UI["Presentation layer: Streamlit"]
+        app["app.py<br/>page setup and menu"]
+        views["views/<br/>home, search, nearby, insights, about_data"]
+        common["ui_common.py<br/>cached loading, maps, safe text"]
+    end
+    subgraph CORE["Core logic: explorer/ (plain Python)"]
+        loader["data_loader.py<br/>read and clean CSV"]
+        search["text_search.py<br/>normalise, edit distance, rank"]
+        geo["geo.py<br/>haversine, nearest, state estimate"]
+        analysis["analysis.py<br/>grid, counts, statistics"]
+    end
+    csv[("data/austlang.csv<br/>AUSTLANG, AIATSIS, CC BY 4.0")]
+    script["scripts/download_data.py"]
+    tests["tests/ (pytest)"]
+
+    user -- "clicks and typed text" --> app
+    app --> views
+    views -- "get_data()" --> common
+    common -- "load_languages()" --> loader
+    loader -- "reads" --> csv
+    script -- "checks and saves" --> csv
+    loader -- "estimate_state()" --> geo
+    common -- "build_search_index()" --> search
+    views -- "search_languages()" --> search
+    views -- "parse_coordinates(), nearest_languages()" --> geo
+    views -- "density_grid(), state_profiles(), ..." --> analysis
+    views -- "tables, charts and maps" --> user
+    tests -. "check" .-> CORE
+```
+
+Data flow: on first use, `ui_common.get_data()` calls `load_languages()`, which reads
+the CSV, cleans each row into a `Language` object and returns a `CleaningReport`. The
+result and a search index are cached, so later screens reuse them. Each screen reads
+user input, validates it, calls the core functions and displays the results. See
+`docs/architecture.md` for more detail.
+
+## Main algorithms
+
+1. **Spelling-tolerant search** (`explorer/text_search.py`). Names are normalised (accents,
+   case, spaces and punctuation removed). Each spelling is classed as an exact, starts-with,
+   contains or similar-spelling match; similarity uses a hand-written Levenshtein edit
+   distance (dynamic programming, two rows of memory) with a length shortcut that skips
+   hopeless comparisons. Each language keeps its best match; results are ranked by match
+   type, score and name.
+2. **Nearest varieties** (`explorer/geo.py`). The haversine formula gives the great-circle
+   distance from the user's point to every mapped variety; results within the chosen
+   distance are sorted (ties alphabetical) and the closest k returned with a compass direction.
+3. **State estimate** (`explorer/geo.py`). A rule-based classifier using the straight state
+   borders (129°E, 138°E, 141°E, 26°S, 29°S) plus interpolated lines for the QLD–NSW and
+   NSW–VIC borders. Used only when AUSTLANG's own state column is missing or blank.
+4. **Analysis** (`explorer/analysis.py`). Floor-division binning into a lat/long grid, the
+   number of busiest squares holding half of all varieties, per-state counts and averages,
    and alternative-name statistics.
 
 ## Data, licence and responsible use
