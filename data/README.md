@@ -12,7 +12,7 @@ Aboriginal and Torres Strait Islander Studies (AIATSIS).
 | Publisher | AIATSIS (data@aiatsis.gov.au) |
 | Licence | Creative Commons Attribution 4.0 International (CC BY 4.0) |
 | Format | CSV (comma separated) |
-| Downloaded on | _fill in, or see `austlang_source.json` (written by the download script)_ |
+| Downloaded on |13 October 2026  |
 
 AUSTLANG is a live dataset that AIATSIS updates regularly, so record the date you downloaded it.
 AIATSIS launched AustLang Online (version 3) in June 2026, and the old direct CSV link
