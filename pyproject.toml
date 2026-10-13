@@ -1,0 +1,9 @@
+[project]
+name = "austlang-explorer"
+version = "1.0.0"
+description = "Explore Aboriginal and Torres Strait Islander languages recorded in AUSTLANG (CITS1501 project)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

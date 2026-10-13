@@ -1,0 +1,11 @@
+[theme]
+base = "light"
+primaryColor = "#1D5C63"            # estuary teal: buttons, sliders, links
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#EDF2F1" # pale grey-green panels and sidebar
+textColor = "#1E272C"               # slate ink
+font = "sans serif"
+
+[browser]
+# Don't send usage statistics to Streamlit (privacy).
+gatherUsageStats = false
