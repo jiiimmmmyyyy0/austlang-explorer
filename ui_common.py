@@ -28,7 +28,7 @@ LICENCE_URL = "https://creativecommons.org/licenses/by/4.0/"
 
 # To show UWA's Acknowledgement of Country in the sidebar, paste the official
 # wording between the quotes. Copy it from UWA rather than having AI write it.
-ACKNOWLEDGEMENT = ""
+ACKNOWLEDGEMENT = "The University of Western Australia acknowledges that its Crawley campus is situated on Whadjuk Noongar land, and that the Whadjuk Noongar people remain the spiritual and cultural custodians of their land, and continue to practise their values, languages, beliefs and knowledge."
 
 # Map colours as [red, green, blue, opacity]; they match .streamlit/config.toml.
 TEAL = [29, 92, 99, 200]
