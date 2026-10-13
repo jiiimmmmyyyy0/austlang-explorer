@@ -37,14 +37,10 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ```
 
-Get the data (one time). The script downloads AUSTLANG and checks it:
-
-```bash
-python scripts/download_data.py
-```
-
-If AIATSIS blocks the scripted download, download the CSV in your browser from
-<https://data.gov.au/data/dataset/austlang-dataset-001> and run:
+Get the data (one time). Open AustLang Online's data page,
+<https://aiatsis.gov.au/austlang/dataResources>, leave every field ticked and click
+**Download as a CSV**. Then run the script on the file, which copies it into `data/`
+and checks it:
 
 ```bash
 python scripts/download_data.py path/to/downloaded-file.csv
@@ -64,9 +60,10 @@ It opens at <http://localhost:8501>.
 pytest
 ```
 
-The suite has 148 automated test cases (pytest counts each parametrised case) covering
-data cleaning, the search algorithm, distance and direction calculations, the state
-estimate, the analysis functions, invalid input, edge cases and boundary conditions.
+The suite has 157 automated test cases (pytest counts each parametrised case) covering
+data cleaning (including both the AustLang v3 and the older file layouts), the search
+algorithm, distance and direction calculations, the state estimate, the analysis
+functions, invalid input, edge cases and boundary conditions.
 All test data is synthetic (see `tests/fixtures/README.md`).
 
 Manual checks of the main user workflows are in `docs/manual-testing.md`.
@@ -94,7 +91,7 @@ explorer/               core logic, plain Python (no Streamlit), fully tested
   text_search.py        normalisation, Levenshtein edit distance, ranked search
   geo.py                haversine distance, bearings, coordinate parsing, nearest search, state estimate
   analysis.py           density grid, concentration, state profiles, name statistics
-scripts/download_data.py  downloads and checks the dataset
+scripts/download_data.py  checks the downloaded dataset and saves it
 data/                   austlang.csv and its README (source, licence, columns)
 tests/                  pytest suite and synthetic fixture
 docs/                   architecture and manual testing checklist
@@ -126,7 +123,7 @@ flowchart TD
     views -- "get_data()" --> common
     common -- "load_languages()" --> loader
     loader -- "reads" --> csv
-    script -- "downloads and checks" --> csv
+    script -- "checks and saves" --> csv
     loader -- "estimate_state()" --> geo
     common -- "build_search_index()" --> search
     views -- "search_languages()" --> search

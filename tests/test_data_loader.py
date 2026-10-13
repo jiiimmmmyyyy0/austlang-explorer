@@ -1,4 +1,6 @@
 """Tests for loading and cleaning the data file (explorer/data_loader.py)."""
+import csv
+
 import pytest
 
 from explorer.data_loader import (
@@ -10,9 +12,38 @@ from explorer.data_loader import (
     parse_states,
     safe_link,
     split_multi_value,
+    split_name_variants,
     to_csv_text,
 )
 from explorer.models import MIN_RECORDS
+from explorer.text_search import EXACT, build_search_index, search_languages
+
+# The header of the CSV exported from AustLang Online (version 3), in its own order.
+AUSTLANG_V3_HEADER = [
+    "primary_name", "lat", "lon", "state_territory", "austlang_code", "overview",
+    "thes_lang_head", "thes_peop_head", "status", "abs_name", "ethnologue_name",
+    "iso_639_3_code", "tindale_name", "location_info",
+]
+
+
+def write_v3_file(tmp_path, rows):
+    """Write a synthetic AustLang v3-style file; each row gives only some columns."""
+    path = tmp_path / "austlang_v3.csv"
+    with path.open("w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=AUSTLANG_V3_HEADER)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    return path
+
+
+V3_ROWS = [
+    {"austlang_code": "TEST1", "primary_name": "Zetaword / Zedaword", "lat": "-31.95",
+     "lon": "115.86", "state_territory": "WA", "abs_name": "Zetaword",
+     "ethnologue_name": "Zetawurd", "tindale_name": "Zeta-word", "status": "Synthetic"},
+    {"austlang_code": "TEST2", "primary_name": "Kappaword", "state_territory": "NT",
+     "abs_name": "Kappaword Group, nfd"},
+]
 
 
 # ---- The whole cleaning pipeline on the sample file -------------------------
@@ -112,6 +143,30 @@ def test_pipe_separated_file_without_a_state_column(tmp_path):
     assert languages[0].regions == ("WA",)
 
 
+def test_austlang_v3_file_is_read_with_its_own_column_names(tmp_path):
+    languages, report = load_languages(write_v3_file(tmp_path, V3_ROWS))
+    by_code = {language.code: language for language in languages}
+    assert report.rows_kept == 2
+    assert report.columns_used["name"] == "primary_name"
+    assert report.columns_used["latitude"] == "lat"
+    assert "uri" not in report.columns_used                  # v3 files have no link column
+    assert by_code["TEST1"].name == "Zetaword / Zedaword"     # the published name is kept whole
+    assert by_code["TEST1"].alternative_names == ("Zetaword", "Zedaword", "Zetawurd", "Zeta-word")
+    assert by_code["TEST2"].alternative_names == ("Kappaword Group, nfd",)  # comma stays inside
+    assert by_code["TEST2"].latitude is None                  # blank coordinates: kept, not mapped
+    assert report.alternative_names_found == 5
+    assert report.no_coordinates == 1
+
+
+def test_spelling_inside_a_v3_primary_name_is_an_exact_match(tmp_path):
+    languages, _ = load_languages(write_v3_file(tmp_path, V3_ROWS))
+    by_code = {language.code: language for language in languages}
+    results = search_languages("Zedaword", build_search_index(languages), by_code)
+    assert results[0].language.code == "TEST1"
+    assert results[0].match_type == EXACT
+    assert results[0].matched_main_name is False
+
+
 def test_file_saved_by_a_spreadsheet_program_is_still_read(tmp_path):
     path = tmp_path / "cp1252.csv"
     path.write_bytes("language_code,language_name\nTEST1,Caf\u00e9word\n".encode("cp1252"))
@@ -147,6 +202,30 @@ def test_split_multi_value(text, expected):
 
 def test_parse_alternative_names_removes_blanks_repeats_and_main_name():
     assert parse_alternative_names("Bee, bee, , Main, Cee", "main") == ("Bee", "Cee")
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Name A / Name B", ["Name A", "Name B"]),
+    ("Name A/Name B/Name C", ["Name A", "Name B", "Name C"]),
+    ("Group, nfd", ["Group, nfd"]),     # only slashes split, so the comma stays
+    ("Single", ["Single"]),
+    (" / ", []),
+    (None, []),
+])
+def test_split_name_variants(text, expected):
+    assert split_name_variants(text) == expected
+
+
+def test_map_columns_reads_the_austlang_v3_header():
+    mapping, ignored = map_columns(AUSTLANG_V3_HEADER)
+    assert mapping == {
+        "code": "austlang_code", "name": "primary_name", "latitude": "lat",
+        "longitude": "lon", "states": "state_territory", "abs_name": "abs_name",
+        "ethnologue_name": "ethnologue_name", "tindale_name": "tindale_name",
+    }
+    assert ignored == [
+        "overview", "thes_lang_head", "thes_peop_head", "status", "iso_639_3_code", "location_info",
+    ]
 
 
 def test_parse_states_handles_full_names_case_and_repeats():

@@ -26,7 +26,7 @@ flowchart TD
     views -- "get_data()" --> common
     common -- "load_languages()" --> loader
     loader -- "reads" --> csv
-    script -- "downloads and checks" --> csv
+    script -- "checks and saves" --> csv
     loader -- "estimate_state()" --> geo
     common -- "build_search_index()" --> search
     views -- "search_languages()" --> search
@@ -48,12 +48,12 @@ flowchart TD
 | `explorer/text_search.py` | Normalisation, Levenshtein distance, match classification, ranked search |
 | `explorer/geo.py` | Coordinate validation and parsing, haversine distance, bearing, nearest search, state estimate |
 | `explorer/analysis.py` | Density grid, concentration measure, state profiles, alternative-name statistics |
-| `scripts/download_data.py` | Downloads (or accepts) the AUSTLANG CSV, runs the cleaner, records the download date |
+| `scripts/download_data.py` | Takes the AUSTLANG CSV downloaded from AustLang Online, runs the cleaner, records the download date |
 | `tests/` | pytest suite using a synthetic fixture with deliberate data problems |
 
 ## Data flow
 
-1. **Download (once).** `scripts/download_data.py` saves `data/austlang.csv` and `data/austlang_source.json`.
+1. **Download (once).** The CSV is downloaded from AustLang Online in a browser; `scripts/download_data.py` checks it and saves `data/austlang.csv` and `data/austlang_source.json`.
 2. **Load (first visit).** A screen calls `get_data()`. On a cache miss it calls `load_languages()`,
    which reads every row, cleans it into a `Language` object and fills in a `CleaningReport`.
    `build_search_index()` normalises every spelling once. The result is cached and shared by all

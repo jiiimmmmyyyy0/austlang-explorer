@@ -54,6 +54,20 @@ else:
         "**Estimated each variety's state or territory** from its coordinates, because "
         "this file has no state column."
     )
+if "alternative_names" in report.columns_used:
+    names_source = "from the synonym column (comma- or pipe-separated)"
+else:
+    names_source = (
+        "from the spellings inside each primary name (separated by slashes) and the "
+        "ABS, Ethnologue and Tindale names"
+    )
+if "uri" in report.columns_used:
+    link_step = (
+        "**Checked the links.** Only ordinary web addresses were kept; "
+        f"{report.unsafe_links_removed:,} were removed."
+    )
+else:
+    link_step = "**Checked for links.** This file has no link column, so no record links are shown."
 st.markdown(
     f"""
 1. **Read the file** as {escape_markdown(report.encoding)} text and trimmed extra spaces from every value.
@@ -61,9 +75,9 @@ st.markdown(
 3. **Removed {report.missing_code_or_name:,} rows** that had no language code or no name.
 4. **Removed {report.duplicate_codes:,} repeated codes**, keeping the first copy of each.
 5. **Checked the coordinates.** {report.no_coordinates:,} varieties have none, and {report.invalid_coordinates:,} had values that were not numbers or fell outside Australia. These varieties stay searchable but are not mapped.
-6. **Split the alternative names** (comma- or pipe-separated) and removed blanks, repeats and copies of the main name, leaving {report.alternative_names_found:,} alternative names.
+6. **Collected the alternative names** {names_source}, and removed blanks, repeats and copies of the main name, leaving {report.alternative_names_found:,} alternative names.
 7. {state_step}
-8. **Checked the links.** Only ordinary web addresses were kept; {report.unsafe_links_removed:,} were removed.
+8. {link_step}
 """
 )
 st.download_button(

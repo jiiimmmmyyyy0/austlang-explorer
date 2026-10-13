@@ -1,0 +1,8 @@
+{
+  "source": "browser download from https://aiatsis.gov.au/austlang/dataResources (austlang.csv)",
+  "dataset_page": "https://data.gov.au/data/dataset/austlang-dataset-001",
+  "licence": "CC BY 4.0",
+  "downloaded": "2026-10-13",
+  "rows_read": 1183,
+  "rows_kept": 1183
+}

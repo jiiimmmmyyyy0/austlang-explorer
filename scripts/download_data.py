@@ -1,10 +1,14 @@
-"""Download the AUSTLANG dataset and check that the app can read it.
+"""Check a downloaded AUSTLANG file and save it where the app reads it.
 
-Run from the project folder:
-    python scripts/download_data.py                 download from AIATSIS
-    python scripts/download_data.py path/to/file.csv  use a file you downloaded in a browser
+AIATSIS launched AustLang Online (version 3) in June 2026, and the old direct
+CSV link stopped working, so the file is now downloaded in a browser:
 
-The file is saved as data/austlang.csv, and the download date is recorded in
+    1. Open https://aiatsis.gov.au/austlang/dataResources
+    2. Leave every field ticked and click "Download as a CSV".
+    3. From the project folder, run:
+           python scripts/download_data.py path/to/the/file.csv
+
+The file is copied to data/austlang.csv, and the download date is recorded in
 data/austlang_source.json so the About screen can show it.
 """
 from __future__ import annotations
@@ -12,7 +16,6 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -21,38 +24,29 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from explorer.data_loader import load_languages  # noqa: E402  (needs the path above)
 
-SOURCE_URL = "https://collection.aiatsis.gov.au/datasets/austlang/001.csv"
+DOWNLOAD_PAGE = "https://aiatsis.gov.au/austlang/dataResources"
 DATASET_PAGE = "https://data.gov.au/data/dataset/austlang-dataset-001"
 TARGET = PROJECT_ROOT / "data" / "austlang.csv"
 INFO_FILE = PROJECT_ROOT / "data" / "austlang_source.json"
 
-
-def download(url: str, target: Path) -> None:
-    request = urllib.request.Request(url, headers={"User-Agent": "AUSTLANG-Explorer (UWA CITS1501 student project)"})
-    with urllib.request.urlopen(request, timeout=120) as response, open(target, "wb") as out:
-        shutil.copyfileobj(response, out)
+HOW_TO_DOWNLOAD = f"""Download the AUSTLANG file in your browser first:
+  1. Open {DOWNLOAD_PAGE}
+  2. Leave every field ticked and click "Download as a CSV".
+  3. Run:  python scripts/download_data.py path/to/the/file.csv"""
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print(HOW_TO_DOWNLOAD)
+        return 1
     TARGET.parent.mkdir(exist_ok=True)
-    if len(argv) > 1:
-        source = Path(argv[1]).expanduser()
-        if not source.is_file():
-            print(f"Can't find {source}. Check the path and try again.")
-            return 1
-        if source.resolve() != TARGET.resolve():
-            shutil.copyfile(source, TARGET)
-        origin = f"browser download ({source.name})"
-    else:
-        print(f"Downloading {SOURCE_URL}\n(the file is generated live, so this can take a minute)...")
-        try:
-            download(SOURCE_URL, TARGET)
-        except OSError as error:  # no internet, blocked request, HTTP error, timeout
-            print(f"\nThe download didn't work: {error}")
-            print(f"Download the CSV in your browser from {DATASET_PAGE}, then run:")
-            print("    python scripts/download_data.py path/to/the/file.csv")
-            return 1
-        origin = SOURCE_URL
+    source = Path(argv[1]).expanduser()
+    if not source.is_file():
+        print(f"Can't find {source}. Check the path and try again.")
+        return 1
+    if source.resolve() != TARGET.resolve():
+        shutil.copyfile(source, TARGET)
+    origin = f"browser download from {DOWNLOAD_PAGE} ({source.name})"
 
     try:
         languages, report = load_languages(TARGET)

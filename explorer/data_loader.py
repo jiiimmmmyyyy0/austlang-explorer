@@ -1,5 +1,12 @@
 """Load the AUSTLANG CSV file and clean it into Language objects.
 
+Two layouts are read. The CSV exported from AustLang Online (version 3,
+launched June 2026) has `austlang_code`, `primary_name`, `lat` and `lon`, puts
+alternative spellings inside the primary name ("Name A / Name B") and has
+separate ABS, Ethnologue and Tindale name columns. Older AUSTLANG files had a
+`language_synonym` column instead. Column names are matched, not positions, so
+the order of the columns does not matter.
+
 Only the Python standard library is used, so every cleaning step is visible here.
 """
 from __future__ import annotations
@@ -17,14 +24,22 @@ from .models import STATE_NAMES, CleaningReport, Language
 # Each field the app needs, and the column names it may appear under (lower case).
 COLUMN_ALIASES = {
     "code": ("language_code", "code", "austlang_code"),
-    "name": ("language_name", "name"),
+    "name": ("language_name", "primary_name", "name"),
     "alternative_names": ("language_synonym", "language_synonyms", "synonyms", "synonym"),
     "latitude": ("approximate_latitude_of_language_variety", "latitude", "lat"),
     "longitude": ("approximate_longitude_of_language_variety", "longitude", "lon", "lng"),
     "states": ("state_territory", "states", "state"),
     "uri": ("uri", "url", "language_uri"),
+    "abs_name": ("abs_name",),
+    "ethnologue_name": ("ethnologue_name",),
+    "tindale_name": ("tindale_name",),
 }
 REQUIRED_FIELDS = ("code", "name")
+
+# Other recorded names for each variety in AustLang v3 files: the names used by
+# the Australian Bureau of Statistics, Ethnologue and Norman Tindale's catalogue.
+# They become alternative names, so a search by any of them finds the variety.
+OTHER_NAME_FIELDS = ("abs_name", "ethnologue_name", "tindale_name")
 
 # Encodings to try, in order. AUSTLANG publishes UTF-8 with a byte-order mark;
 # the others cover a file re-saved by a spreadsheet program.
@@ -64,12 +79,31 @@ def split_multi_value(value: object) -> list[str]:
     return [part for part in cleaned if part]
 
 
-def parse_alternative_names(value: object, main_name: str) -> tuple[str, ...]:
-    """Alternative names without blanks, repeats or copies of the main name."""
+def split_name_variants(value: object) -> list[str]:
+    """Split 'Name A / Name B' into ['Name A', 'Name B'].
+
+    AustLang v3 lists a variety's spellings inside one name, separated by
+    slashes. Only slashes split here: names such as 'Language Group, nfd'
+    contain commas that belong to the name.
+    """
+    cleaned = (clean_text(part) for part in clean_text(value).split("/"))
+    return [part for part in cleaned if part]
+
+
+def parse_alternative_names(
+    value: object, main_name: str, extra_names: Iterable[str] = ()
+) -> tuple[str, ...]:
+    """Alternative names without blanks, repeats or copies of the main name.
+
+    `value` is a synonym cell (comma-, semicolon- or pipe-separated) and
+    `extra_names` are names that are already split, such as the spellings inside
+    a v3 primary name and its ABS, Ethnologue and Tindale names.
+    """
     seen = {main_name.casefold()}
     names = []
-    for name in split_multi_value(value):
-        if name.casefold() not in seen:
+    for name in [*split_multi_value(value), *extra_names]:
+        name = clean_text(name)
+        if name and name.casefold() not in seen:
             seen.add(name.casefold())
             names.append(name)
     return tuple(names)
@@ -181,7 +215,9 @@ def load_languages(path: str | Path) -> tuple[list[Language], CleaningReport]:
       3. Skip repeated codes (the first copy is kept).
       4. Read the coordinates. Blanks, non-numbers and points outside
          Australia become "no location"; the variety is still kept.
-      5. Split alternative names and states into lists.
+      5. Collect the alternative names (from the synonym column in older files;
+         in v3 files, the spellings inside the primary name plus the ABS,
+         Ethnologue and Tindale names) and split the states into a list.
       6. Estimate the state from the coordinates.
       7. Keep the AUSTLANG link only if it is a normal web address.
     """
@@ -214,7 +250,14 @@ def load_languages(path: str | Path) -> tuple[list[Language], CleaningReport]:
         seen_codes.add(code.casefold())
 
         latitude, longitude = _read_location(row, mapping, report)
-        alternative_names = parse_alternative_names(_cell(row, mapping, "alternative_names"), name)
+        extra_names = split_name_variants(name)
+        if len(extra_names) == 1:
+            extra_names = []  # a single spelling is just the main name
+        for field_name in OTHER_NAME_FIELDS:
+            extra_names.extend(split_name_variants(_cell(row, mapping, field_name)))
+        alternative_names = parse_alternative_names(
+            _cell(row, mapping, "alternative_names"), name, extra_names
+        )
         report.alternative_names_found += len(alternative_names)
 
         raw_link = _cell(row, mapping, "uri")
